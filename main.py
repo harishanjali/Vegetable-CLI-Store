@@ -138,6 +138,9 @@ def add_item_to_store():
 
 
 def delete_item_from_store():
+    if len(inventory)==0:
+        print('*'*10,'Inventory is Empty You can delete','*'*10)
+        return False
     while True:
         item_name = input('Enter item name to delete: ')
         item = get_item_from_inventory(item_name)
@@ -383,6 +386,7 @@ def billing(cart):
 # ─────────────────────────────────────────────
 
 def customer_menu():
+    global visited_customers_count,purchased_customers_count
     cart = []
     print('<<<< Welcome.... You entered into customer view.... Explore our store >>>>')
     visited_customers_count += 1
