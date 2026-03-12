@@ -7,7 +7,7 @@ inventory = [
 visited_customers_count = 0
 purchased_customers_count = 0
 sales_records = []
-
+purchased_customers_list=[]
 
 # ─────────────────────────────────────────────
 # HELPER FUNCTIONS
@@ -41,6 +41,24 @@ def show_menu(options):
 
 def is_inventory_empty():
     return len(inventory) == 0
+
+def isnumber(num):
+    try:
+        num = int(num)
+        return isinstance(num, int)
+    except ValueError:
+        return False
+    
+def valid_phone_number(number):
+    for num in number:
+        if not isnumber(num):
+            return False
+    if not number.startswith(('6','7','8','9')):
+        return False
+    if len(number)!= 10:
+        return False
+    return True
+
 
 
 # ─────────────────────────────────────────────
@@ -192,7 +210,7 @@ def modify_item_in_store():
 def shopkeeper_menu():
     print('*' * 10, 'Welcome.... You entered into shopkeeper view', '*' * 10)
     while True:
-        ch = show_menu(['1.Add item', '2.Delete item', '3.Modify item', '4.See list details', '5.Customer count', '6.Revenue Report(itemized)', '7.Exit'])
+        ch = show_menu(['1.Add item', '2.Delete item', '3.Modify item', '4.See list details', '5.Customer count', '6.Revenue Report(itemized)','7.Customer List', '8.Exit'])
         if ch == '1':
             add_item_to_store()
         elif ch == '2':
@@ -207,11 +225,19 @@ def shopkeeper_menu():
         elif ch == '6':
             display_itemized_report()
         elif ch == '7':
+            get_customers_list()
+            break
+        elif ch == '8':
             print('Exiting the shopkeeper view')
             break
         else:
             print('<<<<<Enter valid input>>>>>')
 
+def get_customers_list():
+    if len(purchased_customers_list)==0:
+        print('Customers are not purchased, No list present')
+    else:
+        print(purchased_customers_list)
 
 # ─────────────────────────────────────────────
 # CART FUNCTIONS
@@ -359,6 +385,13 @@ def delete_cart(cart):
         delete_sales_records(obj)
     return []
 
+def get_total_amount(cart):
+    total_bill = 0
+    for obj in cart:
+        if obj['quantity'] > 0:
+            each_item_total = obj['quantity'] * obj['sp']
+            total_bill += each_item_total
+    return total_bill
 
 def billing(cart):
     total_bill = 0
@@ -378,7 +411,9 @@ def billing(cart):
         print('#' * 80)
     else:
         print('*' * 10, 'You did not do the shopping, Continue the Shopping', '*' * 10)
-    return total_bill
+
+def checkout():
+    pass
 
 
 # ─────────────────────────────────────────────
@@ -406,14 +441,23 @@ def customer_menu():
         elif ch == '6':
             billing(cart)
         elif ch == '7':
-            total_amount = billing(cart)
+            total_amount = get_total_amount(cart)
             if total_amount > 0:
                 purchased_customers_count+=1
-                print('Checking out...')
-                print('Your payable amount is', total_amount)
-                print('Thanks for shopping with us, Wait for sometime to get your items.')
-                print('*' * 80)
-                cart = []
+                user_name = input('Enter Your Name: ')
+                while True:
+                    phone_number = input('Enter phone number: ')
+                    valid_number = valid_phone_number(phone_number)
+                    if valid_number:
+                        customer = {"name":user_name,"ph_no":phone_number}
+                        purchased_customers_list.append(customer)
+                        print('Checking out...')
+                        billing(cart)
+                        print('Your payable amount is', total_amount)
+                        print('Thanks for shopping with us, Wait for sometime to get your items.')
+                        print('*' * 80)
+                        cart = []
+                        break
                 break
             else:
                 print('*' * 10, 'You did not do the shopping, continue shopping', '*' * 10)
