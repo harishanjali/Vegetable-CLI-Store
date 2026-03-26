@@ -3,7 +3,8 @@ inventory = [
     {'name': 'brinjal', 'quantity': 20, 'cost_price': 15, 'selling_price': 20},
     {'name': 'onion',   'quantity': 30, 'cost_price': 15, 'selling_price': 10},
 ]
-
+admin_name = 'harish'
+admin_pass = '12345678'
 visited_customers_count = 0
 purchased_customers_count = 0
 sales_records = []
@@ -42,16 +43,10 @@ def show_menu(options):
 def is_inventory_empty():
     return len(inventory) == 0
 
-def isnumber(num):
-    try:
-        num = int(num)
-        return isinstance(num, int)
-    except ValueError:
-        return False
-    
+
 def valid_phone_number(number):
     for num in number:
-        if not isnumber(num):
+        if not num.isdigit():
             return False
     if not number.startswith(('6','7','8','9')):
         return False
@@ -59,7 +54,8 @@ def valid_phone_number(number):
         return False
     return True
 
-
+def authenticate_user(username,password):
+    return username==admin_name and password==admin_pass
 
 # ─────────────────────────────────────────────
 # SALES RECORDS FUNCTIONS
@@ -71,7 +67,10 @@ def update_sales_records(obj, action):
             if action == 'increase':
                 record['quantity'] = record['quantity'] + obj['quantity']
             if action == 'decrease':
-                record['quantity'] = record['quantity'] - obj['quantity']
+                if record['quantity'] - obj['quantity']<=0:
+                    sales_records.remove(record)
+                else:
+                    record['quantity'] = record['quantity'] - obj['quantity']
             break
     else:
         sales_records.append(obj)
@@ -168,6 +167,7 @@ def delete_item_from_store():
                 inventory.remove(item)
                 print('>>> Item Deleted Successfully....')
                 break
+            break
         else:
             print('Item you entered is not present. Enter valid item name.')
 
@@ -189,7 +189,7 @@ def modify_item_in_store():
                     item['selling_price'] = get_positive_float('Enter the new selling price: ')
                     break
                 elif ch == '4':
-                    print('Exiting the current tab')
+                    print('*'*10,'Exiting the current tab','*'*10)
                     break
                 else:
                     print('Wrong input, enter correct input')
@@ -210,34 +210,57 @@ def modify_item_in_store():
 def shopkeeper_menu():
     print('*' * 10, 'Welcome.... You entered into shopkeeper view', '*' * 10)
     while True:
-        ch = show_menu(['1.Add item', '2.Delete item', '3.Modify item', '4.See list details', '5.Customer count', '6.Revenue Report(itemized)','7.Customer List', '8.Exit'])
-        if ch == '1':
-            add_item_to_store()
-        elif ch == '2':
-            delete_item_from_store()
-        elif ch == '3':
-            modify_item_in_store()
-        elif ch == '4':
-            show_all_details('shopkeeper')
-        elif ch == '5':
-            print('Total Customers visited are: ', visited_customers_count)
-            print('Total purchased Customers are: ',purchased_customers_count)
-        elif ch == '6':
-            display_itemized_report()
-        elif ch == '7':
-            get_customers_list()
-            break
-        elif ch == '8':
-            print('Exiting the shopkeeper view')
+        username = input('Enter user name: ')
+        password = input('Enter password: ')
+        if authenticate_user(username,password):
+            print('Login Success')
+            while True:
+                ch = show_menu(['1.Add item', '2.Delete item', '3.Modify item', '4.See list details', '5.Customer count', '6.Revenue Report(itemized)','7.Customer List', '8.Total revenue','9.Exit'])
+                if ch == '1':
+                    add_item_to_store()
+                elif ch == '2':
+                    delete_item_from_store()
+                elif ch == '3':
+                    modify_item_in_store()
+                elif ch == '4':
+                    show_all_details('shopkeeper')
+                elif ch == '5':
+                    print('Total Customers visited are: ', visited_customers_count)
+                    print('Total purchased Customers are: ',purchased_customers_count)
+                elif ch == '6':
+                    display_itemized_report()
+                elif ch == '7':
+                    get_customers_list()
+                elif ch=='8':
+                    total_revenue()
+                elif ch == '9':
+                    print('*'*10,'Exiting the shopkeeper view','*'*10)
+                    break
+                else:
+                    print('<<<<<Enter valid input>>>>>')
+                    break
             break
         else:
-            print('<<<<<Enter valid input>>>>>')
-
+            print('Invalid credentials','Login Failure')
+            continue
+    
 def get_customers_list():
     if len(purchased_customers_list)==0:
-        print('Customers are not purchased, No list present')
+        print('*'*10,'Customers are not purchased, No list present','*'*10)
     else:
         print(purchased_customers_list)
+
+def total_revenue():
+    total_revenue = 0
+    if sales_records == []:
+        print('No sales record')
+        return
+    print(f"{'Name':<15} {'Quantity(Kgs)':<20} {'Selling Price(Rs)':<20} {'Each Veg revenue':<15}")
+    for record in sales_records:
+        each_revenue = record['quantity']*record['sp']
+        print(f"{record['item_name']:<15} {record['quantity']:<23} {record['sp']:<15} {each_revenue:<15}")
+        total_revenue += record['quantity']*record['sp']
+    print('*'*10,'Total revenue is',total_revenue,'*'*10)
 
 # ─────────────────────────────────────────────
 # CART FUNCTIONS
@@ -245,6 +268,7 @@ def get_customers_list():
 
 def add_to_cart(cart):
     while True:
+        show_all_details('customer')
         customer_input = input('What do you want? : ')
         item = get_item_from_inventory(customer_input)
         if item:
@@ -297,12 +321,16 @@ def modify_the_quantity(quant, action, item_name, cart):
     item = get_item_from_inventory(item_name)
     order_obj_sales = {'item_name': item_name, 'quantity': quant, 'sp': item['selling_price'], 'cp': item['cost_price']}
     if action == 'decrease':
-        for obj in cart:
-            if obj['item_name'] == item_name and obj['quantity'] > 0:
-                obj['quantity'] -= quant
-                item['quantity'] += quant
-                break
         update_sales_records(order_obj_sales, 'decrease')
+        for obj in cart:
+            if quant == 0 or obj['quantity']-quant<=0:
+                delete_item_from_cart(cart,item_name)
+                break
+            else:
+                if obj['item_name'] == item_name and obj['quantity'] > 0:
+                    obj['quantity'] -= quant
+                    item['quantity'] += quant
+                    break
     elif action == 'increase':
         for obj in cart:
             if obj['item_name'] == item_name:
@@ -346,7 +374,7 @@ def modify_cart(cart):
                             continue
                     elif ch == '2':
                         quant = get_positive_float('Enter quantity: ')
-                        can_decrease = any(obj['item_name'] == item_name and obj['quantity'] > quant for obj in cart)
+                        can_decrease = any(obj['item_name'] == item_name and obj['quantity'] >= quant for obj in cart)
                         if can_decrease:
                             cart = modify_the_quantity(quant, 'decrease', item_name, cart)
                             break
@@ -378,12 +406,16 @@ def modify_cart(cart):
 
 
 def delete_cart(cart):
-    for obj in cart:
-        item = get_item_from_inventory(obj['item_name'])
-        if item:
-            item['quantity'] += obj['quantity']
-        delete_sales_records(obj)
-    return []
+    if cart !=[]:
+        for obj in cart:
+            item = get_item_from_inventory(obj['item_name'])
+            if item:
+                item['quantity'] += obj['quantity']
+            delete_sales_records(obj)
+        print('*' * 10, 'Cart Deleted Successfully.....', '*' * 10)
+        return []
+    else:
+        print('*' * 10, 'Cart is Empty.....', '*' * 10)
 
 def get_total_amount(cart):
     total_bill = 0
@@ -435,7 +467,6 @@ def customer_menu():
             modify_cart(cart)
         elif ch == '4':
             cart = delete_cart(cart)
-            print('*' * 10, 'Cart Deleted Successfully.....', '*' * 10)
         elif ch == '5':
             show_all_details('customer')
         elif ch == '6':
